@@ -49,7 +49,7 @@ class Habito{
   }
 
   //tojson() pasa el objeto de un map (clave -> valor) y luego el servicio lo convertra en tecto
-  Map<String, dynamic> toJsob() =>{
+  Map<String, dynamic> toJson() =>{
     'id': id,
     'nombre': nombre,
     'color': color,
