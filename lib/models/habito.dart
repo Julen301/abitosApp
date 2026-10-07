@@ -1,5 +1,3 @@
-
-
 class Habito{
   final String id; //el id lo pongo final ya que nunca cambia los demas si
   String nombre;
