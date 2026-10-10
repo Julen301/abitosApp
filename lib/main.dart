@@ -24,7 +24,7 @@ class _HabitosAppState extends State<HabitosApp>{
   bool _cargando = true;
   bool _primeraVez = true;
   bool _oscuro = false;
-  double _tamanoletra = PreferenciasService.tamanoLetraPorDefecto;
+  double _tamanoLetra = PreferenciasService.tamanoLetraPorDefecto;
 
   //initState se ejecuta una vex añ crearse eñ witjet ahi lanzamos la carga
   //_cargar hace en orden abrir shared_preferences init y suma 1 al contador
@@ -54,7 +54,7 @@ class _HabitosAppState extends State<HabitosApp>{
 
   void _leerAjustes(){
     _oscuro = _service.temaOscuro;
-    _tamanoletra = _service.tamanoLetra;
+    _tamanoLetra = _service.tamanoLetra;
   }
 
   //_recargar se llamara desde la pantalla de bienvenida caundo el usuario termine
