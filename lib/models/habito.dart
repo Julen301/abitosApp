@@ -38,7 +38,7 @@ class Habito{
     return racha;
   }
 
-  void alternaHoy(){
+  void alternarHoy(){
     final hoy = claveFecha(DateTime.now());
     if(fechasCompletadas.contains(hoy)){
       fechasCompletadas.remove(hoy);
