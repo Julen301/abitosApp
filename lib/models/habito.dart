@@ -18,8 +18,7 @@ class Habito{
   //completadoHoy convierte la fehca de hoy en texto y mira si esta en la lista
   bool get completadoHoy => fechasCompletadas.contains(claveFecha(DateTime.now()));
   //totalCompletados es simplemente coatas fejcas hay
-  int get totalCompletas => fechasCompletadas.length;
-
+  int get totalCompletados => fechasCompletadas.length;
   int get rachaActual{
     //toSet() conviete la lista en un conj8tos donde bucar es mas rapido
     /*si hoy aun no esta hecho empezaremos a contar desde ayer asi
