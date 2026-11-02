@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../models/habito.dart';
-import '../models/usuario.dart';
+import '../modelos/habito.dart';
+import '../modelos/usuario.dart';
+import 'campo_texto_app.dart';
+import 'boton_principal.dart';
 
 // Colores entre los que se puede elegir (guardados como int, igual que en el modelo)
 const List<int> paletaColores = [
@@ -139,12 +141,11 @@ class _HabitoFormDialogState extends State<HabitoFormDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              TextField(
-                controller: _nombreCtrl,
-                autofocus: true,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: InputDecoration(labelText: 'Nombre', errorText: _error),
-              ),
+              CampoTextoApp(etiqueta: 'Nombre', controller: _nombreCtrl),
+              if (_error != null) ...[
+                const SizedBox(height: 4),
+                Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              ],
               const SizedBox(height: 16),
 
               // Solo administrador: elegir de quién es el hábito
@@ -202,17 +203,19 @@ class _HabitoFormDialogState extends State<HabitoFormDialog> {
                   ),
                 ),
               ],
+              const SizedBox(height: 18),
+              BotonPrincipal(texto: 'Guardar', onPressed: _guardar),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancelar'),
+                ),
+              ),
             ],
           ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context), // cancelar devuelve null
-          child: const Text('Cancelar'),
-        ),
-        ElevatedButton(onPressed: _guardar, child: const Text('Guardar')),
-      ],
     );
   }
 }

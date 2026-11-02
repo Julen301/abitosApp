@@ -1,9 +1,9 @@
 import 'package:sqflite/sqflite.dart';
 
 import '../errores.dart';
-import '../models/estadistica.dart';
-import '../models/habito.dart';
-import '../models/usuario.dart';
+import '../modelos/estadistica.dart';
+import '../modelos/habito.dart';
+import '../modelos/usuario.dart';
 import 'db_helper.dart';
 
 // CRUD de la tabla "habitos".

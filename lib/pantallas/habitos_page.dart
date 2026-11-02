@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 
-import '../models/habito.dart';
-import '../models/usuario.dart';
-import '../services/servicios.dart';
-import '../widgets/habito_tile.dart';
+import '../modelos/habito.dart';
+import '../modelos/usuario.dart';
+import '../servicios/servicios.dart';
+import '../widgets/tarjeta_habito.dart';
+import '../widgets/habito_form_dialog.dart';
+import '../widgets/confirmar_dialog.dart';
 import 'admin_screen.dart';
 import 'ajustes_screen.dart';
-import 'estadisticas_screen.dart';
-import 'gestion_habitos_screen.dart';
+import 'estadisticas_page.dart';
+import 'editar_habito_page.dart';
 
 // Pantalla principal: saluda, muestra el progreso del día y la lista de hábitos
 // DEL USUARIO que tiene la sesión abierta.
@@ -62,6 +64,28 @@ class _PrincipalScreenState extends State<PrincipalScreen> {
     await widget.servicios.habitos.alternarHoy(widget.usuario, h);
     if (!mounted) return;
     setState(() {}); // redibuja la pantalla
+  }
+
+  Future<void> _editarHabito(Habito habito) async {
+    final editado = await mostrarFormularioHabito(
+      context,
+      existente: habito,
+      usuarioIdPorDefecto: habito.usuarioId,
+    );
+    if (editado == null) return;
+    await widget.servicios.habitos.actualizar(widget.usuario, editado);
+    await _cargar();
+  }
+
+  Future<void> _eliminarHabito(Habito habito) async {
+    final confirmado = await confirmar(
+      context,
+      titulo: 'Eliminar hábito',
+      texto: '¿Seguro que quieres eliminar "${habito.nombre}"? También se borrarán sus estadísticas.',
+    );
+    if (!confirmado) return;
+    await widget.servicios.habitos.eliminar(widget.usuario, habito);
+    await _cargar();
   }
 
   // Abre otra pantalla y, al volver, recarga los datos por si han cambiado
@@ -292,9 +316,16 @@ class _PrincipalScreenState extends State<PrincipalScreen> {
                 ),
               ),
 
-            // Un HabitoTile por cada hábito visible
+            // Cada tarjeta recibe los datos y acciones del hábito correspondiente.
             for (final h in visibles)
-              HabitoTile(habito: h, onChanged: (_) => _alternar(h)),
+              TarjetaHabito(
+                nombre: h.nombre,
+                color: Color(h.color),
+                completadoHoy: h.completadoHoy,
+                onCompletar: () => _alternar(h),
+                onEditar: () => _editarHabito(h),
+                onEliminar: () => _eliminarHabito(h),
+              ),
           ],
         ),
       ),

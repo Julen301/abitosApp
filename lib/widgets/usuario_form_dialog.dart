@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../errores.dart';
-import '../models/usuario.dart';
-import '../services/auth_service.dart';
+import '../modelos/usuario.dart';
+import '../servicios/auth_service.dart';
 
 // Formulario (solo administrador) para crear o editar un usuario.
 // Devuelve el Usuario listo para guardar (con la contraseña ya cifrada)

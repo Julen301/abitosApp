@@ -2,8 +2,8 @@
 import 'package:intl/intl.dart';
 
 import '../errores.dart';
-import '../models/usuario.dart';
-import '../services/servicios.dart';
+import '../modelos/usuario.dart';
+import '../servicios/servicios.dart';
 import '../widgets/confirmar_dialog.dart';
 import '../widgets/usuario_form_dialog.dart';
 

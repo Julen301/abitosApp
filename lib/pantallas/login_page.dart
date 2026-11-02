@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../errores.dart';
-import '../models/usuario.dart';
-import '../services/servicios.dart';
+import '../modelos/usuario.dart';
+import '../servicios/servicios.dart';
 import '../widgets/logo_app.dart';
-import 'registro_screen.dart';
+import '../widgets/campo_texto_app.dart';
+import '../widgets/boton_principal.dart';
+import 'registro_page.dart';
 
 // Pantalla de login. Es StatefulWidget porque cambian cosas mientras el usuario
 // escribe: el mensaje de error, si se ve la contraseña y si se está comprobando.
@@ -26,7 +28,6 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _idCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
-  bool _verPassword = false;
   bool _enviando = false;
   String? _error;
 
@@ -99,43 +100,21 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: TextStyle(color: scheme.onSurfaceVariant),
                   ),
                   const SizedBox(height: 32),
-                  TextField(
-                    controller: _idCtrl,
-                    textInputAction: TextInputAction.next,
-                    decoration: const InputDecoration(
-                      labelText: 'Usuario o email',
-                      prefixIcon: Icon(Icons.person_outline),
-                    ),
-                  ),
+                  CampoTextoApp(etiqueta: 'Usuario o email', controller: _idCtrl),
                   const SizedBox(height: 16),
-                  TextField(
+                  CampoTextoApp(
+                    etiqueta: 'Contraseña',
                     controller: _passCtrl,
-                    obscureText: !_verPassword,
-                    onSubmitted: (_) => _entrar(),
-                    decoration: InputDecoration(
-                      labelText: 'Contraseña',
-                      prefixIcon: const Icon(Icons.lock_outline),
-                      suffixIcon: IconButton(
-                        icon: Icon(_verPassword
-                            ? Icons.visibility_off_outlined
-                            : Icons.visibility_outlined),
-                        onPressed: () =>
-                            setState(() => _verPassword = !_verPassword),
-                      ),
-                    ),
+                    obscureText: true,
                   ),
                   if (_error != null) ...[
                     const SizedBox(height: 12),
                     Text(_error!, style: TextStyle(color: scheme.error)),
                   ],
                   const SizedBox(height: 28),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _enviando ? null : _entrar,
-                      icon: const Icon(Icons.login_rounded),
-                      label: Text(_enviando ? 'Entrando...' : 'Entrar'),
-                    ),
+                  BotonPrincipal(
+                    texto: _enviando ? 'Entrando...' : 'Entrar',
+                    onPressed: _enviando ? () {} : _entrar,
                   ),
                   const SizedBox(height: 12),
                   TextButton(

@@ -4,9 +4,10 @@ import 'package:flutter/material.dart';
 // de forma legible (dd/MM/yyyy HH:mm) en vez del texto ISO que guardamos.
 import 'package:intl/intl.dart';
 
-import '../models/estadistica.dart';
-import '../models/usuario.dart';
-import '../services/servicios.dart';
+import '../modelos/estadistica.dart';
+import '../modelos/usuario.dart';
+import '../servicios/servicios.dart';
+import '../widgets/dato_estadistica.dart';
 
 // Pantalla de estadísticas del usuario: lee la tabla "estadisticas"
 // (aperturas de la app + racha y total de cada hábito).
@@ -161,47 +162,31 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
               ),
             // Una tarjeta por hábito con su racha y su total
             for (final e in deHabitos)
-              Container(
+              Card(
                 margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: scheme.surface,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border(
-                    left: BorderSide(
-                        color: Color(e.habitoColor ?? 0xFF9E9E9E), width: 6),
-                    top: BorderSide(color: scheme.outlineVariant),
-                    right: BorderSide(color: scheme.outlineVariant),
-                    bottom: BorderSide(color: scheme.outlineVariant),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(e.habitoNombre ?? 'Hábito',
+                        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 12),
+                      DatoEstadistica(
+                        etiqueta: 'Racha actual',
+                        valor: '${e.rachaActual} días',
+                        icono: Icons.local_fire_department,
+                        color: Color(e.habitoColor ?? 0xFF9E9E9E),
+                      ),
+                      const SizedBox(height: 10),
+                      DatoEstadistica(
+                        etiqueta: 'Días completados',
+                        valor: '${e.totalCompletados} días',
+                        icono: Icons.task_alt_rounded,
+                        color: scheme.primary,
+                      ),
+                    ],
                   ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      e.habitoNombre ?? 'Hábito',
-                      style: const TextStyle(
-                          fontSize: 17, fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        const Icon(Icons.local_fire_department,
-                            color: Colors.deepOrange, size: 20),
-                        const SizedBox(width: 6),
-                        Text('Racha actual: ${e.rachaActual} días'),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        Icon(Icons.task_alt_rounded,
-                            color: scheme.primary, size: 20),
-                        const SizedBox(width: 6),
-                        Text('Total completados: ${e.totalCompletados} días'),
-                      ],
-                    ),
-                  ],
                 ),
               ),
           ],

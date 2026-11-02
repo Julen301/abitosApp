@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../errores.dart';
-import '../models/usuario.dart';
-import '../services/servicios.dart';
+import '../modelos/usuario.dart';
+import '../servicios/servicios.dart';
 import '../widgets/confirmar_dialog.dart';
 
 // Pantalla de ajustes: cuenta, tema, tamaño de letra, objetivo diario,

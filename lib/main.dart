@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
-import 'models/usuario.dart';
-import 'screens/login_screen.dart';
-import 'screens/principal_screen.dart';
-import 'screens/registro_screen.dart';
-import 'services/db_helper.dart';
-import 'services/preferencias_service.dart';
-import 'services/servicios.dart';
+import 'modelos/usuario.dart';
+import 'pantallas/login_page.dart';
+import 'pantallas/habitos_page.dart';
+import 'pantallas/registro_page.dart';
+import 'servicios/db_helper.dart';
+import 'servicios/preferencias_service.dart';
+import 'servicios/servicios.dart';
 
 void main() {
   runApp(const HabitosApp());

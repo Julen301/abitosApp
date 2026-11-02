@@ -4,7 +4,7 @@ import 'dart:math';
 import 'package:crypto/crypto.dart';
 
 import '../errores.dart';
-import '../models/usuario.dart';
+import '../modelos/usuario.dart';
 import 'usuario_repository.dart';
 
 // Registro, login y contraseñas.

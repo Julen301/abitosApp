@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../models/estadistica.dart';
-import '../models/habito.dart';
-import '../models/usuario.dart';
+import '../modelos/estadistica.dart';
+import '../modelos/habito.dart';
+import '../modelos/usuario.dart';
 
 // Formulario (solo administrador) para crear o editar una fila de "estadisticas".
 // Devuelve la Estadistica o null si se cancela.

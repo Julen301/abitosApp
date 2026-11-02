@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../errores.dart';
-import '../models/usuario.dart';
-import '../services/servicios.dart';
+import '../modelos/usuario.dart';
+import '../servicios/servicios.dart';
 import '../widgets/logo_app.dart';
+import '../widgets/campo_texto_app.dart';
+import '../widgets/boton_principal.dart';
 
 // Pantalla de registro. Sale en dos casos:
 //  - primeraVez = true: la BD no tiene ningún usuario (primera vez que se abre
@@ -32,7 +34,6 @@ class _RegistroScreenState extends State<RegistroScreen> {
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final _pass2Ctrl = TextEditingController();
-  bool _verPassword = false;
   bool _enviando = false;
   String? _error;
 
@@ -127,83 +128,33 @@ class _RegistroScreenState extends State<RegistroScreen> {
                     ),
                     const SizedBox(height: 24),
                   ],
-                  TextField(
-                    controller: _usuarioCtrl,
-                    textInputAction: TextInputAction.next,
-                    decoration: const InputDecoration(
-                      labelText: 'Usuario',
-                      prefixIcon: Icon(Icons.alternate_email),
-                    ),
-                  ),
+                  CampoTextoApp(etiqueta: 'Usuario', controller: _usuarioCtrl),
                   const SizedBox(height: 14),
-                  TextField(
-                    controller: _nombreCtrl,
-                    textCapitalization: TextCapitalization.words,
-                    textInputAction: TextInputAction.next,
-                    decoration: const InputDecoration(
-                      labelText: 'Nombre',
-                      prefixIcon: Icon(Icons.person_outline),
-                    ),
-                  ),
+                  CampoTextoApp(etiqueta: 'Nombre', controller: _nombreCtrl),
                   const SizedBox(height: 14),
-                  TextField(
-                    controller: _apellidosCtrl,
-                    textCapitalization: TextCapitalization.words,
-                    textInputAction: TextInputAction.next,
-                    decoration: const InputDecoration(
-                      labelText: 'Apellidos',
-                      prefixIcon: Icon(Icons.badge_outlined),
-                    ),
-                  ),
+                  CampoTextoApp(etiqueta: 'Apellidos', controller: _apellidosCtrl),
                   const SizedBox(height: 14),
-                  TextField(
-                    controller: _emailCtrl,
-                    keyboardType: TextInputType.emailAddress,
-                    textInputAction: TextInputAction.next,
-                    decoration: const InputDecoration(
-                      labelText: 'Email',
-                      prefixIcon: Icon(Icons.mail_outline),
-                    ),
-                  ),
+                  CampoTextoApp(etiqueta: 'Email', controller: _emailCtrl),
                   const SizedBox(height: 14),
-                  TextField(
+                  CampoTextoApp(
+                    etiqueta: 'Contraseña (mínimo 6 caracteres)',
                     controller: _passCtrl,
-                    obscureText: !_verPassword,
-                    textInputAction: TextInputAction.next,
-                    decoration: InputDecoration(
-                      labelText: 'Contraseña (mínimo 6 caracteres)',
-                      prefixIcon: const Icon(Icons.lock_outline),
-                      suffixIcon: IconButton(
-                        icon: Icon(_verPassword
-                            ? Icons.visibility_off_outlined
-                            : Icons.visibility_outlined),
-                        onPressed: () =>
-                            setState(() => _verPassword = !_verPassword),
-                      ),
-                    ),
+                    obscureText: true,
                   ),
                   const SizedBox(height: 14),
-                  TextField(
+                  CampoTextoApp(
+                    etiqueta: 'Repite la contraseña',
                     controller: _pass2Ctrl,
-                    obscureText: !_verPassword,
-                    onSubmitted: (_) => _registrar(),
-                    decoration: const InputDecoration(
-                      labelText: 'Repite la contraseña',
-                      prefixIcon: Icon(Icons.lock_reset_outlined),
-                    ),
+                    obscureText: true,
                   ),
                   if (_error != null) ...[
                     const SizedBox(height: 12),
                     Text(_error!, style: TextStyle(color: scheme.error)),
                   ],
                   const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _enviando ? null : _registrar,
-                      icon: const Icon(Icons.rocket_launch_outlined),
-                      label: Text(_enviando ? 'Creando cuenta...' : 'Crear cuenta'),
-                    ),
+                  BotonPrincipal(
+                    texto: _enviando ? 'Creando cuenta...' : 'Crear cuenta',
+                    onPressed: _enviando ? () {} : _registrar,
                   ),
                 ],
               ),

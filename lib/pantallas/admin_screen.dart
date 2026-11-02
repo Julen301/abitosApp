@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../models/usuario.dart';
-import '../services/servicios.dart';
+import '../modelos/usuario.dart';
+import '../servicios/servicios.dart';
 import 'admin_estadisticas_tab.dart';
 import 'admin_usuarios_tab.dart';
-import 'gestion_habitos_screen.dart';
+import 'editar_habito_page.dart';
 
 // Panel del administrador: una pestaña por tabla de la base de datos.
 // Cada pestaña es un CRUD completo (crear, leer, actualizar, borrar).
@@ -47,6 +47,12 @@ class _AdminScreenState extends State<AdminScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (!widget.usuario.esAdmin) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Acceso restringido')),
+        body: const Center(child: Text('Esta sección solo está disponible para administradores.')),
+      );
+    }
     return Scaffold(
       appBar: AppBar(
         title: const Text('Panel de administrador'),

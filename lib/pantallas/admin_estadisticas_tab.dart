@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../errores.dart';
-import '../models/estadistica.dart';
-import '../models/usuario.dart';
-import '../services/servicios.dart';
+import '../modelos/estadistica.dart';
+import '../modelos/usuario.dart';
+import '../servicios/servicios.dart';
 import '../widgets/confirmar_dialog.dart';
 import '../widgets/estadistica_form_dialog.dart';
 

@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../errores.dart';
-import '../models/habito.dart';
-import '../models/usuario.dart';
-import '../services/servicios.dart';
+import '../modelos/habito.dart';
+import '../modelos/usuario.dart';
+import '../servicios/servicios.dart';
 import '../widgets/confirmar_dialog.dart';
 import '../widgets/habito_form_dialog.dart';
+import '../widgets/tarjeta_habito.dart';
 
 // Pantalla para crear, editar y borrar hábitos (CRUD de la tabla "habitos").
 //  - Usuario normal: solo ve y gestiona SUS hábitos.
@@ -152,49 +153,17 @@ class _GestionHabitosScreenState extends State<GestionHabitosScreen> {
                       itemCount: habitos.length,
                       itemBuilder: (_, i) {
                         final h = habitos[i];
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          decoration: BoxDecoration(
-                            color: scheme.surface,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: scheme.outlineVariant),
+                        return TarjetaHabito(
+                          nombre: _modoAdmin
+                              ? '${h.nombre} · ${h.propietario ?? h.usuarioId}'
+                              : h.nombre,
+                          color: Color(h.color),
+                          completadoHoy: h.completadoHoy,
+                          onCompletar: () => _ejecutar(
+                            () => widget.servicios.habitos.alternarHoy(widget.usuario, h),
                           ),
-                          child: ListTile(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            leading: CircleAvatar(
-                              backgroundColor: Color(h.color),
-                              radius: 16,
-                            ),
-                            title: Text(
-                              h.nombre,
-                              style: const TextStyle(
-                                  fontSize: 16, fontWeight: FontWeight.w600),
-                            ),
-                            // El admin ve de quién es cada hábito
-                            subtitle: _modoAdmin
-                                ? Text('Usuario: ${h.propietario ?? h.usuarioId} · '
-                                    '${h.totalCompletados} días completados')
-                                : null,
-                            // Dos iconos a la derecha: editar y borrar
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  tooltip: 'Editar',
-                                  icon: const Icon(Icons.edit_outlined),
-                                  onPressed: () => _editar(h),
-                                ),
-                                IconButton(
-                                  tooltip: 'Borrar',
-                                  icon: Icon(Icons.delete_outline,
-                                      color: scheme.error),
-                                  onPressed: () => _borrar(h),
-                                ),
-                              ],
-                            ),
-                          ),
+                          onEditar: () => _editar(h),
+                          onEliminar: () => _borrar(h),
                         );
                       },
                     ),
