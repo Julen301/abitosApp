@@ -116,7 +116,7 @@ class _HabitosAppState extends State<HabitosApp> {
       useMaterial3: true,
       colorScheme: scheme,
       scaffoldBackgroundColor:
-      brillo == Brightness.light ? const Color(0xFFF3F8F6) : scheme.surface,
+          brillo == Brightness.light ? const Color(0xFFF3F8F6) : scheme.surface,
       appBarTheme: AppBarTheme(
         centerTitle: false,
         backgroundColor: Colors.transparent,
@@ -185,8 +185,8 @@ class _HabitosAppState extends State<HabitosApp> {
                 const SizedBox(height: 16),
                 const Text(
                   'Si estás en web, ejecuta una vez en la terminal:\n'
-                      'dart run sqflite_common_ffi_web:setup\n'
-                      'y vuelve a lanzar la app.',
+                  'dart run sqflite_common_ffi_web:setup\n'
+                  'y vuelve a lanzar la app.',
                   textAlign: TextAlign.center,
                 ),
               ],

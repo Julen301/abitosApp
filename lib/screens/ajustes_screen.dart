@@ -1,19 +1,30 @@
 import 'package:flutter/material.dart';
-import '../services/preferencias_service.dart';
 
-// Pantalla de ajustes: tema, tamaño de letra, ocultar completados y borrar datos.
+import '../errores.dart';
+import '../models/usuario.dart';
+import '../services/servicios.dart';
+import '../widgets/confirmar_dialog.dart';
+
+// Pantalla de ajustes: cuenta, tema, tamaño de letra, objetivo diario,
+// ocultar completados y borrado de datos.
+// Los ajustes siguen guardándose en SharedPreferences.
 class AjustesScreen extends StatefulWidget {
-  final PreferenciasService service;
+  final Servicios servicios;
+  final Usuario usuario;
   // Avisa a main.dart de que cambió un ajuste para que redibuje la app
   final VoidCallback onAjustesCambiados;
-  // Pide a main.dart que borre todo y vuelva a la bienvenida
-  final Future<void> Function() onBorrarDatos;
+  // Pide a main.dart que cierre la sesión (vuelve al login)
+  final Future<void> Function() onCerrarSesion;
+  // Pide a main.dart que vacíe toda la BD (solo admin) y vuelva al registro
+  final Future<void> Function() onBorrarTodo;
 
   const AjustesScreen({
     super.key,
-    required this.service,
+    required this.servicios,
+    required this.usuario,
     required this.onAjustesCambiados,
-    required this.onBorrarDatos,
+    required this.onCerrarSesion,
+    required this.onBorrarTodo,
   });
 
   @override
@@ -24,51 +35,63 @@ class _AjustesScreenState extends State<AjustesScreen> {
   late bool _oscuro;
   late bool _ocultar;
   late double _tamano;
+  late double _objetivo;
 
   @override
   void initState() {
     super.initState();
+    final p = widget.servicios.prefs;
     // Partimos de los valores guardados
-    _oscuro = widget.service.temaOscuro;
-    _ocultar = widget.service.ocultarCompletados;
-    _tamano = widget.service.tamanoLetra;
+    _oscuro = p.temaOscuro;
+    _ocultar = p.ocultarCompletados;
+    _tamano = p.tamanoLetra;
+    _objetivo = p.objetivoDiario(widget.usuario.id!).toDouble();
   }
 
-  // Pide confirmación y, si el usuario acepta, borra todos los datos
-  Future<void> _confirmarBorrado() async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        icon: Icon(Icons.warning_amber_rounded,
-            size: 40, color: Theme.of(context).colorScheme.error),
-        title: const Text('Borrar todos los datos'),
-        content: const Text(
-          'Se eliminarán hábitos, estadísticas y ajustes. '
-              'La app quedará como recién instalada.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size(120, 44),
-              backgroundColor: Theme.of(context).colorScheme.error,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Borrar todo'),
-          ),
-        ],
-      ),
-    );
-    if (ok != true) return; // si cancela, no hacemos nada
+  void _aviso(String texto) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texto)));
+  }
 
-    // main.dart borra las preferencias y vuelve a cargar (saldrá la bienvenida)
-    await widget.onBorrarDatos();
+  Future<void> _cerrarSesion() async {
+    await widget.onCerrarSesion();
     if (!mounted) return;
     // Cerramos esta pantalla y volvemos a la primera de la pila
+    Navigator.of(context).popUntil((r) => r.isFirst);
+  }
+
+  // Borra los hábitos del usuario (su cuenta se queda)
+  Future<void> _borrarMisHabitos() async {
+    final ok = await confirmar(
+      context,
+      titulo: 'Borrar mis hábitos',
+      texto: 'Se eliminarán todos tus hábitos y sus estadísticas. '
+          'Tu cuenta se conserva.',
+      textoBoton: 'Borrar hábitos',
+    );
+    if (!ok) return;
+    try {
+      await widget.servicios.habitos
+          .borrarDeUsuario(widget.usuario, widget.usuario.id!);
+      _aviso('Hábitos eliminados');
+    } on ErrorApp catch (e) {
+      _aviso(e.mensaje);
+    }
+  }
+
+  // Solo admin: vacía toda la base de datos
+  Future<void> _borrarTodo() async {
+    final ok = await confirmar(
+      context,
+      titulo: 'Borrar toda la base de datos',
+      texto: 'Se eliminarán TODOS los usuarios, hábitos y estadísticas, '
+          'y los ajustes. La app quedará como recién instalada.',
+      textoBoton: 'Borrar todo',
+    );
+    if (!ok) return;
+    // main.dart vacía la BD y las preferencias y vuelve al registro
+    await widget.onBorrarTodo();
+    if (!mounted) return;
     Navigator.of(context).popUntil((r) => r.isFirst);
   }
 
@@ -85,9 +108,19 @@ class _AjustesScreenState extends State<AjustesScreen> {
     );
   }
 
+  Widget _titulo(String texto) => Padding(
+        padding: const EdgeInsets.only(left: 4, bottom: 10),
+        child: Text(
+          texto,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final u = widget.usuario;
+    final p = widget.servicios.prefs;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Ajustes')),
@@ -97,13 +130,30 @@ class _AjustesScreenState extends State<AjustesScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             children: [
-              const Padding(
-                padding: EdgeInsets.only(left: 4, bottom: 10),
-                child: Text(
-                  'Apariencia',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              _titulo('Cuenta'),
+              _tarjeta([
+                ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: scheme.primaryContainer,
+                    child: Text(
+                      u.nombre.isEmpty ? '?' : u.nombre[0].toUpperCase(),
+                      style: TextStyle(color: scheme.onPrimaryContainer),
+                    ),
+                  ),
+                  title: Text(u.nombreCompleto),
+                  subtitle: Text(
+                      '@${u.usuario} · ${u.esAdmin ? 'Administrador' : 'Usuario'}\n${u.email}'),
+                  isThreeLine: true,
                 ),
-              ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.logout_rounded),
+                  title: const Text('Cerrar sesión'),
+                  onTap: _cerrarSesion,
+                ),
+              ]),
+              const SizedBox(height: 24),
+              _titulo('Apariencia'),
               _tarjeta([
                 // Interruptor del tema claro/oscuro
                 SwitchListTile(
@@ -115,7 +165,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
                   onChanged: (v) async {
                     setState(() => _oscuro = v);
                     // PERSISTENCIA: guardamos el bool
-                    await widget.service.guardarTemaOscuro(v);
+                    await p.guardarTemaOscuro(v);
                     widget.onAjustesCambiados(); // main.dart cambia el tema
                   },
                 ),
@@ -134,20 +184,14 @@ class _AjustesScreenState extends State<AjustesScreen> {
                     onChanged: (v) => setState(() => _tamano = v),
                     // Al soltar guardamos el double (así no escribimos en cada movimiento)
                     onChangeEnd: (v) async {
-                      await widget.service.guardarTamanoLetra(v);
+                      await p.guardarTamanoLetra(v);
                       widget.onAjustesCambiados();
                     },
                   ),
                 ),
               ]),
               const SizedBox(height: 24),
-              const Padding(
-                padding: EdgeInsets.only(left: 4, bottom: 10),
-                child: Text(
-                  'Hábitos',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                ),
-              ),
+              _titulo('Hábitos'),
               _tarjeta([
                 // Interruptor para ocultar los hábitos ya hechos hoy
                 SwitchListTile(
@@ -156,22 +200,56 @@ class _AjustesScreenState extends State<AjustesScreen> {
                   value: _ocultar,
                   onChanged: (v) async {
                     setState(() => _ocultar = v);
-                    await widget.service.guardarOcultarCompletados(v);
+                    await p.guardarOcultarCompletados(v);
                     widget.onAjustesCambiados();
                   },
                 ),
+                const Divider(height: 1),
+                // Objetivo diario (uno por usuario)
+                ListTile(
+                  leading: const Icon(Icons.flag_outlined),
+                  title: Text('Objetivo diario: ${_objetivo.round()} hábitos'),
+                  subtitle: Slider(
+                    min: 1,
+                    max: 20,
+                    divisions: 19,
+                    value: _objetivo,
+                    label: _objetivo.round().toString(),
+                    onChanged: (v) => setState(() => _objetivo = v),
+                    onChangeEnd: (v) =>
+                        p.guardarObjetivoDiario(u.id!, v.round()),
+                  ),
+                ),
               ]),
               const SizedBox(height: 32),
-              // Botón rojo para borrar todo
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: scheme.error,
-                  foregroundColor: Colors.white,
+              // Botones rojos de borrado
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: scheme.error,
+                    foregroundColor: Colors.white,
+                  ),
+                  icon: const Icon(Icons.delete_sweep_outlined),
+                  label: const Text('Borrar mis hábitos'),
+                  onPressed: _borrarMisHabitos,
                 ),
-                icon: const Icon(Icons.delete_forever),
-                label: const Text('Borrar datos'),
-                onPressed: _confirmarBorrado,
               ),
+              if (u.esAdmin) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: scheme.error,
+                      foregroundColor: Colors.white,
+                    ),
+                    icon: const Icon(Icons.delete_forever),
+                    label: const Text('Borrar toda la base de datos'),
+                    onPressed: _borrarTodo,
+                  ),
+                ),
+              ],
             ],
           ),
         ),

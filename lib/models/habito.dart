@@ -1,70 +1,82 @@
-class Habito{
-  final String id; //el id lo pongo final ya que nunca cambia los demas si
+import 'dart:convert';
+
+// Modelo Habito: una fila de la tabla "habitos".
+// Ahora cada hábito pertenece a un usuario (usuarioId) y el id lo genera SQLite.
+class Habito {
+  final int? id; // null mientras no esté guardado en la BD
+  int usuarioId; // dueño del hábito
   String nombre;
   int color;
   List<String> fechasCompletadas;
 
+  // Solo para listados del administrador (viene de un JOIN, no es columna)
+  String? propietario;
+
   Habito({
-    required this.id, //el campo requiered te obliga a pasar los datos que se pide
+    this.id,
+    required this.usuarioId,
     required this.nombre,
     required this.color,
     List<String>? fechasCompletadas,
   }) : fechasCompletadas = fechasCompletadas ?? [];
 
   static String claveFecha(DateTime d) =>
-      '${d.year.toString().padLeft(4,'0')}-' //el termino padleft() rellena con ceros a la izquieda para que el mes en vez de 3 sea 03
+      // padLeft() rellena con ceros a la izquierda, para que el mes en vez de 3 sea 03
+      '${d.year.toString().padLeft(4, '0')}-'
       '${d.month.toString().padLeft(2, '0')}-'
       '${d.day.toString().padLeft(2, '0')}';
-  //completadoHoy convierte la fehca de hoy en texto y mira si esta en la lista
+
+  // completadoHoy convierte la fecha de hoy en texto y mira si está en la lista
   bool get completadoHoy => fechasCompletadas.contains(claveFecha(DateTime.now()));
-  //totalCompletados es simplemente coatas fejcas hay
+
+  // totalCompletados es simplemente cuántas fechas hay
   int get totalCompletados => fechasCompletadas.length;
-  int get rachaActual{
-    //toSet() conviete la lista en un conj8tos donde bucar es mas rapido
-    /*si hoy aun no esta hecho empezaremos a contar desde ayer asi
-     la racho no se pierde mientras el dia no ha acabado*/
+
+  int get rachaActual {
     final set = fechasCompletadas.toSet();
     var dia = DateTime.now();
-    if(!set.contains(claveFecha(dia))){
+    // si hoy aún no está hecho empezamos a contar desde ayer,
+    // así la racha no se pierde mientras el día no ha acabado
+    if (!set.contains(claveFecha(dia))) {
       dia = DateTime(dia.year, dia.month, dia.day - 1);
     }
     var racha = 0;
-    /*este bucle va a ir dia a dia hacia atras sumando 1 mientras
-    la fehcas este completada y parara el el primer dia que falte*/
-    while(set.contains(claveFecha(dia))){
+    while (set.contains(claveFecha(dia))) {
       racha++;
-      dia = DateTime(dia.year, dia.month, dia.day -1);
+      dia = DateTime(dia.year, dia.month, dia.day - 1);
     }
     return racha;
   }
 
-  void alternarHoy(){
+  void alternarHoy() {
     final hoy = claveFecha(DateTime.now());
-    if(fechasCompletadas.contains(hoy)){
+    if (fechasCompletadas.contains(hoy)) {
       fechasCompletadas.remove(hoy);
-    }else{
+    } else {
       fechasCompletadas.add(hoy);
     }
   }
 
-  //tojson() pasa el objeto de un map (clave -> valor) y luego el servicio lo convertra en tecto
-  Map<String, dynamic> toJson() =>{
-    'id': id,
-    'nombre': nombre,
-    'color': color,
-    'fechas': fechasCompletadas,
-  };
+  // Objeto -> fila de la BD. Las fechas se guardan como texto JSON: ["2026-10-21", ...]
+  Map<String, Object?> toMap() => {
+        if (id != null) 'id': id,
+        'usuario_id': usuarioId,
+        'nombre': nombre,
+        'color': color,
+        'fechas_completadas': jsonEncode(fechasCompletadas),
+      };
 
-  //fromJson() hace lo contrario recibe el map que sale de jsondecode y contruye u habito
-  //factory es un contructor que puede devolver un objeto a parti de otrso datos
-  //el termino as String le deice a dart el tipo real de cada valor
-  factory Habito.fromJson(Map<String, dynamic> json) => Habito(
-    id: json['id'] as String,
-    nombre: json['nombre'] as String,
-    color: json['color'] as int,
-    fechasCompletadas:
-    //(json['fechas'] as List?) ?? const [] protege contra el caso null : si no hubiera fehcas guardads usa una lista vaicao en ves de romper
-    List<String>.from((json['fechas'] as List?) ?? const []),
-  );
+  // Fila de la BD -> objeto
+  factory Habito.fromMap(Map<String, Object?> m) {
+    final h = Habito(
+      id: m['id'] as int,
+      usuarioId: m['usuario_id'] as int,
+      nombre: m['nombre'] as String,
+      color: m['color'] as int,
+      fechasCompletadas: List<String>.from(
+          jsonDecode(m['fechas_completadas'] as String? ?? '[]') as List),
+    );
+    h.propietario = m['propietario'] as String?;
+    return h;
+  }
 }
-
