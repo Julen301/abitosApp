@@ -90,6 +90,7 @@ class _HabitoFormDialogState extends State<HabitoFormDialog> {
     if (nombre.isEmpty) {
       setState(() => _error = 'Escribe un nombre');
       return;
+      
     }
 
     final e = widget.existente;
