@@ -1,23 +1,33 @@
 import 'package:flutter/material.dart';
-import '../models/habito.dart';
-import '../services/preferencias_service.dart';
-import '../widgets/habito_tile.dart';
-import 'ajustes_screen.dart';
-import 'estadisticas_screen.dart';
-import 'gestion_habitos_screen.dart';
 
-// Pantalla principal: saluda, muestra el progreso del día y la lista de hábitos.
+import '../modelos/habito.dart';
+import '../modelos/usuario.dart';
+import '../servicios/servicios.dart';
+import '../widgets/tarjeta_habito.dart';
+import '../widgets/habito_form_dialog.dart';
+import '../widgets/confirmar_dialog.dart';
+import 'admin_screen.dart';
+import 'ajustes_screen.dart';
+import 'estadisticas_page.dart';
+import 'editar_habito_page.dart';
+
+// Pantalla principal: saluda, muestra el progreso del día y la lista de hábitos
+// DEL USUARIO que tiene la sesión abierta.
 class PrincipalScreen extends StatefulWidget {
-  final PreferenciasService service;
-  // Estas dos funciones se las pasamos a Ajustes
+  final Servicios servicios;
+  final Usuario usuario; // usuario con la sesión abierta
+  // Estas funciones se las pasamos a Ajustes
   final VoidCallback onAjustesCambiados;
-  final Future<void> Function() onBorrarDatos;
+  final Future<void> Function() onCerrarSesion;
+  final Future<void> Function() onBorrarTodo;
 
   const PrincipalScreen({
     super.key,
-    required this.service,
+    required this.servicios,
+    required this.usuario,
     required this.onAjustesCambiados,
-    required this.onBorrarDatos,
+    required this.onCerrarSesion,
+    required this.onBorrarTodo,
   });
 
   @override
@@ -36,24 +46,46 @@ class _PrincipalScreenState extends State<PrincipalScreen> {
     _cargar();
   }
 
-  // Lee los hábitos y el ajuste desde SharedPreferences
+  // Lee de la BASE DE DATOS los hábitos del usuario, y el ajuste de SharedPreferences
   Future<void> _cargar() async {
-    final habitos = await widget.service.cargarHabitos();
+    final habitos = await widget.servicios.habitos
+        .listar(widget.usuario, deUsuarioId: widget.usuario.id);
     // Si la pantalla ya no existe tras esperar, no hacemos nada
     if (!mounted) return;
     setState(() {
       _habitos = habitos;
-      _ocultar = widget.service.ocultarCompletados;
+      _ocultar = widget.servicios.prefs.ocultarCompletados;
     });
   }
 
-  // Marca o desmarca un hábito y lo guarda al momento
+  // Marca o desmarca un hábito y lo guarda al momento en la BD
+  // (el repositorio también actualiza su racha y su total en "estadisticas")
   Future<void> _alternar(Habito h) async {
-    h.alternarHoy();
-    // PERSISTENCIA: guardamos la lista entera con los cambios
-    await widget.service.guardarHabitos(_habitos!);
+    await widget.servicios.habitos.alternarHoy(widget.usuario, h);
     if (!mounted) return;
     setState(() {}); // redibuja la pantalla
+  }
+
+  Future<void> _editarHabito(Habito habito) async {
+    final editado = await mostrarFormularioHabito(
+      context,
+      existente: habito,
+      usuarioIdPorDefecto: habito.usuarioId,
+    );
+    if (editado == null) return;
+    await widget.servicios.habitos.actualizar(widget.usuario, editado);
+    await _cargar();
+  }
+
+  Future<void> _eliminarHabito(Habito habito) async {
+    final confirmado = await confirmar(
+      context,
+      titulo: 'Eliminar hábito',
+      texto: '¿Seguro que quieres eliminar "${habito.nombre}"? También se borrarán sus estadísticas.',
+    );
+    if (!confirmado) return;
+    await widget.servicios.habitos.eliminar(widget.usuario, habito);
+    await _cargar();
   }
 
   // Abre otra pantalla y, al volver, recarga los datos por si han cambiado
@@ -62,32 +94,46 @@ class _PrincipalScreenState extends State<PrincipalScreen> {
       context,
       MaterialPageRoute(builder: (_) => pantalla),
     );
+    if (!mounted) return;
     await _cargar();
   }
 
   @override
   Widget build(BuildContext context) {
+    final s = widget.servicios;
     return Scaffold(
       appBar: AppBar(
         title: const Text('HabitosApp'),
         actions: [
+          // Solo el administrador ve este botón
+          if (widget.usuario.esAdmin)
+            IconButton(
+              tooltip: 'Panel de administrador',
+              icon: const Icon(Icons.admin_panel_settings_rounded),
+              onPressed: () =>
+                  _ir(AdminScreen(servicios: s, usuario: widget.usuario)),
+            ),
           IconButton(
             tooltip: 'Gestionar hábitos',
             icon: const Icon(Icons.edit_note),
-            onPressed: () => _ir(GestionHabitosScreen(service: widget.service)),
+            onPressed: () =>
+                _ir(GestionHabitosScreen(servicios: s, usuario: widget.usuario)),
           ),
           IconButton(
             tooltip: 'Estadísticas',
             icon: const Icon(Icons.bar_chart_rounded),
-            onPressed: () => _ir(EstadisticasScreen(service: widget.service)),
+            onPressed: () =>
+                _ir(EstadisticasScreen(servicios: s, usuario: widget.usuario)),
           ),
           IconButton(
             tooltip: 'Ajustes',
             icon: const Icon(Icons.settings_rounded),
             onPressed: () => _ir(AjustesScreen(
-              service: widget.service,
+              servicios: s,
+              usuario: widget.usuario,
               onAjustesCambiados: widget.onAjustesCambiados,
-              onBorrarDatos: widget.onBorrarDatos,
+              onCerrarSesion: widget.onCerrarSesion,
+              onBorrarTodo: widget.onBorrarTodo,
             )),
           ),
           const SizedBox(width: 4),
@@ -132,13 +178,32 @@ class _PrincipalScreenState extends State<PrincipalScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Hola, ${widget.service.nombre} 👋',
+                  'Hola, ${widget.usuario.nombre} 👋',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w800,
                     color: scheme.onPrimary,
                   ),
                 ),
+                if (widget.usuario.esAdmin) ...[
+                  const SizedBox(height: 6),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.22),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      'Administrador',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: scheme.onPrimary,
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 6),
                 // Progreso del día, por ejemplo "2 de 5 hábitos"
                 Text(
@@ -199,12 +264,12 @@ class _PrincipalScreenState extends State<PrincipalScreen> {
   // Parte de la pantalla cuando los datos ya están cargados
   Widget _contenido(List<Habito> habitos) {
     final scheme = Theme.of(context).colorScheme;
-    final objetivo = widget.service.objetivoDiario;
+    final objetivo = widget.servicios.prefs.objetivoDiario(widget.usuario.id!);
     // Contamos cuántos hábitos están hechos hoy
     final hechos = habitos.where((h) => h.completadoHoy).length;
     // Si el ajuste está activado, quitamos de la lista los ya hechos
     final visibles =
-    _ocultar ? habitos.where((h) => !h.completadoHoy).toList() : habitos;
+        _ocultar ? habitos.where((h) => !h.completadoHoy).toList() : habitos;
 
     return Center(
       child: ConstrainedBox(
@@ -251,9 +316,16 @@ class _PrincipalScreenState extends State<PrincipalScreen> {
                 ),
               ),
 
-            // Un HabitoTile por cada hábito visible
+            // Cada tarjeta recibe los datos y acciones del hábito correspondiente.
             for (final h in visibles)
-              HabitoTile(habito: h, onChanged: (_) => _alternar(h)),
+              TarjetaHabito(
+                nombre: h.nombre,
+                color: Color(h.color),
+                completadoHoy: h.completadoHoy,
+                onCompletar: () => _alternar(h),
+                onEditar: () => _editarHabito(h),
+                onEliminar: () => _eliminarHabito(h),
+              ),
           ],
         ),
       ),

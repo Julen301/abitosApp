@@ -3,21 +3,30 @@ import 'package:flutter/material.dart';
 // Aquí solo usamos DateFormat para enseñar la fecha de la última apertura
 // de forma legible (dd/MM/yyyy HH:mm) en vez del texto ISO que guardamos.
 import 'package:intl/intl.dart';
-import '../models/habito.dart';
-import '../services/preferencias_service.dart';
 
-// Pantalla de estadísticas: aperturas de la app y datos de cada hábito.
+import '../modelos/estadistica.dart';
+import '../modelos/usuario.dart';
+import '../servicios/servicios.dart';
+import '../widgets/dato_estadistica.dart';
+
+// Pantalla de estadísticas del usuario: lee la tabla "estadisticas"
+// (aperturas de la app + racha y total de cada hábito).
 class EstadisticasScreen extends StatefulWidget {
-  final PreferenciasService service;
+  final Servicios servicios;
+  final Usuario usuario;
 
-  const EstadisticasScreen({super.key, required this.service});
+  const EstadisticasScreen({
+    super.key,
+    required this.servicios,
+    required this.usuario,
+  });
 
   @override
   State<EstadisticasScreen> createState() => _EstadisticasScreenState();
 }
 
 class _EstadisticasScreenState extends State<EstadisticasScreen> {
-  List<Habito>? _habitos; // null mientras carga
+  List<Estadistica>? _filas; // null mientras carga
 
   @override
   void initState() {
@@ -25,29 +34,30 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
     _cargar();
   }
 
-  // Lee los hábitos guardados en SharedPreferences
+  // Lee de la BD las estadísticas de este usuario
   Future<void> _cargar() async {
-    final h = await widget.service.cargarHabitos();
+    final f = await widget.servicios.estadisticas
+        .listar(widget.usuario, deUsuarioId: widget.usuario.id);
     if (!mounted) return;
-    setState(() => _habitos = h);
+    setState(() => _filas = f);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Estadísticas')),
-      body: _habitos == null
+      body: _filas == null
           ? const Center(child: CircularProgressIndicator())
-          : _contenido(_habitos!),
+          : _contenido(_filas!),
     );
   }
 
   // Tarjeta pequeña con icono, valor y etiqueta
   Widget _datoApp(
       {required IconData icono,
-        required String valor,
-        required String etiqueta,
-        required Color color}) {
+      required String valor,
+      required String etiqueta,
+      required Color color}) {
     final scheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(16),
@@ -89,12 +99,15 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
     );
   }
 
-  Widget _contenido(List<Habito> habitos) {
+  Widget _contenido(List<Estadistica> filas) {
     final scheme = Theme.of(context).colorScheme;
+    // La fila de la app es la que no tiene hábito; las demás son de hábitos
+    final app = filas.where((e) => e.esDeApp).firstOrNull;
+    final deHabitos = filas.where((e) => !e.esDeApp).toList();
     // La última apertura puede ser null si nunca se guardó
-    final ultima = widget.service.ultimaApertura;
+    final ultima = app?.ultimaApertura;
     final textoUltima =
-    ultima == null ? '-' : DateFormat('dd/MM/yyyy HH:mm').format(ultima);
+        ultima == null ? '-' : DateFormat('dd/MM/yyyy HH:mm').format(ultima);
 
     return Center(
       child: ConstrainedBox(
@@ -108,7 +121,7 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
                 Expanded(
                   child: _datoApp(
                     icono: Icons.login_rounded,
-                    valor: '${widget.service.numAperturas}',
+                    valor: '${app?.numAperturas ?? 0}',
                     etiqueta: 'Aperturas de la app',
                     color: Colors.teal,
                   ),
@@ -132,7 +145,7 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
               ),
             ),
-            if (habitos.isEmpty)
+            if (deHabitos.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 32),
                 child: Column(
@@ -148,47 +161,32 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
                 ),
               ),
             // Una tarjeta por hábito con su racha y su total
-            for (final h in habitos)
-              Container(
+            for (final e in deHabitos)
+              Card(
                 margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: scheme.surface,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border(
-                    left: BorderSide(color: Color(h.color), width: 6),
-                    top: BorderSide(color: scheme.outlineVariant),
-                    right: BorderSide(color: scheme.outlineVariant),
-                    bottom: BorderSide(color: scheme.outlineVariant),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(e.habitoNombre ?? 'Hábito',
+                        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 12),
+                      DatoEstadistica(
+                        etiqueta: 'Racha actual',
+                        valor: '${e.rachaActual} días',
+                        icono: Icons.local_fire_department,
+                        color: Color(e.habitoColor ?? 0xFF9E9E9E),
+                      ),
+                      const SizedBox(height: 10),
+                      DatoEstadistica(
+                        etiqueta: 'Días completados',
+                        valor: '${e.totalCompletados} días',
+                        icono: Icons.task_alt_rounded,
+                        color: scheme.primary,
+                      ),
+                    ],
                   ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      h.nombre,
-                      style: const TextStyle(
-                          fontSize: 17, fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        const Icon(Icons.local_fire_department,
-                            color: Colors.deepOrange, size: 20),
-                        const SizedBox(width: 6),
-                        Text('Racha actual: ${h.rachaActual} días'),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        Icon(Icons.task_alt_rounded,
-                            color: scheme.primary, size: 20),
-                        const SizedBox(width: 6),
-                        Text('Total completados: ${h.totalCompletados} días'),
-                      ],
-                    ),
-                  ],
                 ),
               ),
           ],
